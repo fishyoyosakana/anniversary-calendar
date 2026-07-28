@@ -164,6 +164,7 @@ body.custom-bg::after{background:rgba(247,245,241,0.78)}
   </div>
   <div class="topbar-right">
     <button class="top-btn" id="shareBtn">🔗 分享</button>
+    <button class="top-btn" id="calSubscribeBtn">📅 订阅日历</button>
     <button class="top-btn" id="settingsBtn">🎨 背景</button>
     <button class="top-btn top-btn-accent" id="exportImportBtn">📤 导入/导出</button>
   </div>
@@ -500,6 +501,41 @@ $('#downloadBtn').addEventListener('click',()=>{const json=JSON.stringify(data,n
 $('#copyDataBtn').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(JSON.stringify(data,null,2))}catch(e){}});
 $('#importFile').addEventListener('change',()=>{const file=$('#importFile').files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{$('#importText').value=reader.result};reader.readAsText(file)});
 $('#doImportBtn').addEventListener('click',()=>{const text=$('#importText').value.trim();if(!text){toast('请选择文件或粘贴数据');return}try{const imported=JSON.parse(text);if(!imported.anniversaries){toast('数据格式不正确');return}const existingIds=new Set(data.anniversaries.map(a=>a.id));let added=0;imported.anniversaries.forEach(a=>{if(!existingIds.has(a.id)){data.anniversaries.push(a);added++}});if(imported.settings&&imported.settings.name)data.settings.name=imported.settings.name;if(imported.settings&&imported.settings.background)data.settings.background=imported.settings.background;saveData();applyBg();updateRoomName();render();renderSidebar();$('#importModal').classList.remove('show');toast('\u5bfc\u5165\u6210\u529f\uff0c\u65b0\u589e '+added+' \u6761\u7eaa\u5ff5\u65e5 \ud83c\udf89')}catch(e){toast('\u6570\u636e\u89e3\u6790\u5931\u8d25\uff1a'+e.message)}});
+
+// ---- Calendar Subscribe (ICS) ----
+function generateICS(){
+  const name=data.settings&&data.settings.name?data.settings.name:'\u6211\u4eec\u7684\u7eaa\u5ff5\u65e5';
+  let ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//AnniversaryCalendar//CN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nX-WR-CALNAME:'+name+'\r\nX-WR-CALDESC:\u7eaa\u5ff5\u65e5\u65e5\u5386\u8ba2\u9605\r\n';
+  const now=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+  (data.anniversaries||[]).forEach(a=>{
+    const d=parse(a.date);
+    const y=d.getFullYear(),m=pad(d.getMonth()+1),day=pad(d.getDate());
+    const dt=m+day;
+    const uid=(a.id||Date.now())+'@anniversary.cal';
+    const summary=(a.emoji||'')+' '+a.title;
+    const desc=a.desc||'';
+    ics+='BEGIN:VEVENT\r\n';
+    ics+='DTSTART;VALUE=DATE:'+y+m+day+'\r\n';
+    const endD=new Date(d);endD.setDate(endD.getDate()+1);
+    ics+='DTEND;VALUE=DATE:'+endD.getFullYear()+pad(endD.getMonth()+1)+pad(endD.getDate())+'\r\n';
+    ics+='SUMMARY:'+summary+'\r\n';
+    if(desc)ics+='DESCRIPTION:'+desc.replace(/[\r\n,;]/g,' ')+'\r\n';
+    if(a.repeat)ics+='RRULE:FREQ=YEARLY\r\n';
+    ics+='UID:'+uid+'\r\n';
+    ics+='DTSTAMP:'+now+'\r\n';
+    ics+='END:VEVENT\r\n';
+  });
+  ics+='END:VCALENDAR\r\n';
+  return ics;
+}
+$('#calSubscribeBtn').addEventListener('click',()=>{
+  const ics=generateICS();
+  const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='\u7eaa\u5ff5\u65e5\u65e5\u5386.ics';a.click();
+  URL.revokeObjectURL(url);
+  toast('\u5df2\u4e0b\u8f7d .ics \u6587\u4ef6\uff0c\u6253\u5f00\u5373\u53ef\u5bfc\u5165\u65e5\u5386');
+});
 
 // ---- Toast ----
 let toastTimer;function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2200)}
