@@ -220,7 +220,7 @@ body.custom-bg::after{background:rgba(247,245,241,0.78)}
       <div class="form-row"><label>照片（可选，最大 10MB）</label><label class="file-upload-btn" for="fImage">📷 上传照片</label><input type="file" id="fImage" accept="image/*" style="display:none;"><div id="imagePreview" class="image-preview" style="display:none"></div></div>
       <div class="form-row"><label>图标</label><div class="emoji-pick" id="emojiPick"></div></div>
       <div class="form-row"><label>颜色标签</label><div class="color-pick" id="colorPick"></div></div>
-      <div class="form-row"><label>重复</label><div class="toggle-row"><div class="switch" id="repeatSwitch"></div><span class="t-label">每年重复</span></div></div>
+      <div class="form-row"><label>重复</label></div>
     </div>
   </div>
   <div class="modal-foot"><button class="btn btn-ghost" id="closeDayBtn">关闭</button><button class="btn btn-primary" id="saveBtn">保存</button></div>
@@ -286,7 +286,7 @@ const COLORS=[{key:"red",cls:"",hex:"#d96459"},{key:"gold",cls:"c-gold",hex:"#d4
 let data={anniversaries:[],settings:{background:null,name:'我们的纪念日'}};
 let view=new Date();view.setDate(1);
 let selectedDate=null;
-let formState={emoji:EMOJIS[0],color:COLORS[0].key,repeat:false,image:''};
+let formState={emoji:EMOJIS[0],color:COLORS[0].key,repeat:true,image:''};
 let jpYear=view.getFullYear();
 let isRemoteUpdate=false;
 
@@ -428,14 +428,13 @@ function renderAnnList(){
     card.appendChild(media);card.appendChild(main);card.appendChild(del);wrap.appendChild(card);
   });
 }
-function resetForm(){$('#fTitle').value='';$('#fDesc').value='';formState={emoji:EMOJIS[0],color:COLORS[0].key,repeat:false,image:''};$('#repeatSwitch').classList.remove('on');hideImagePreview();buildEmojiPick();buildColorPick()}
+function resetForm(){$('#fTitle').value='';$('#fDesc').value='';formState={emoji:EMOJIS[0],color:COLORS[0].key,repeat:true,image:''};hideImagePreview();buildEmojiPick();buildColorPick()}
 function hideImagePreview(){$('#imagePreview').style.display='none';$('#imagePreview').innerHTML='';formState.image='';$('#fImage').value=''}
 function buildEmojiPick(){const p=$('#emojiPick');p.innerHTML='';EMOJIS.forEach(e=>{const s=el('span');s.textContent=e;if(e===formState.emoji)s.classList.add('on');s.addEventListener('click',()=>{formState.emoji=e;buildEmojiPick()});p.appendChild(s)})}
 function buildColorPick(){const p=$('#colorPick');p.innerHTML='';COLORS.forEach(c=>{const s=el('span');s.style.background=c.hex;if(c.key===formState.color)s.classList.add('on');s.addEventListener('click',()=>{formState.color=c.key;buildColorPick()});p.appendChild(s)})}
 
 $('#fImage').addEventListener('change',()=>{const file=$('#fImage').files[0];if(!file)return;if(file.size>10*1024*1024){toast('图片不能超过 10MB');$('#fImage').value='';return}toast('处理中...');const reader=new FileReader();reader.onload=()=>{formState.image=reader.result;const prev=$('#imagePreview');prev.style.display='inline-block';prev.innerHTML='<img src="'+reader.result+'" alt="\u9884\u89c8"><button class="rm-img">\u00d7</button>';prev.querySelector('.rm-img').addEventListener('click',()=>{formState.image='';hideImagePreview()})};reader.readAsDataURL(file)});
 $('#showAddBtn').addEventListener('click',()=>{$('#addForm').classList.add('show');$('#showAddBtn').style.display='none';$('#fTitle').focus()});
-$('#repeatSwitch').addEventListener('click',()=>{formState.repeat=!formState.repeat;$('#repeatSwitch').classList.toggle('on',formState.repeat)});
 $('#closeDayBtn').addEventListener('click',()=>$('#dayModal').classList.remove('show'));
 $('#dayModal').addEventListener('click',e=>{if(e.target===$('#dayModal'))$('#dayModal').classList.remove('show')});
 $('#saveBtn').addEventListener('click',()=>{
