@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>纪念日日历</title>
+<style>
+  :root {
+    --accent: #d96459;
+    --accent-soft: #fbeae8;
+    --accent-deep: #b84a40;
+    --gold: #d4a24c;
+    --gold-soft: #fbf3e2;
+    --green: #6b9b7e;
+    --blue: #6b8db4;
+    --purple: #9b7bb4;
+    --bg: #f7f5f1;
+    --bg-trans: rgba(247,245,241,0.85);
+    --card: #ffffff;
+    --card-trans: rgba(255,255,255,0.9);
+    --ink: #2b2b2b;
+    --ink-soft: #6b6b6b;
+    --ink-faint: #a8a8a8;
+    --line: #ece8e1;
+    --shadow: 0 4px 20px rgba(40,30,25,0.06);
+    --shadow-lg: 0 12px 40px rgba(40,30,25,0.12);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    color: var(--ink);
+    min-height: 100vh;
+    transition: background .5s;
+    position: relative;
+  }
+
+  /* body overlay for readability when custom bg is set */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: inherit;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    filter: none;
+    opacity: 0;
+    transition: opacity .5s;
+    z-index: -2;
+    pointer-events: none;
+  }
+  body.custom-bg::before { opacity: 1; }
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: rgba(247,245,241,0.92);
+    z-index: -1;
+    transition: background .5s;
+    pointer-events: none;
+  }
+  body.custom-bg::after {
+    background: rgba(247,245,241,0.78);
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+    background: var(--card-trans);
+    border-bottom: 1px solid var(--line);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .room-name {
+    font-size: 18px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--ink);
+    cursor: pointer;
+    border: 1px dashed transparent;
+    padding: 2px 8px;
+    border-radius: 8px;
+    transition: all .15s;
+  }
+  .room-name:hover { border-color: var(--line); background: #faf8f4; }
+  .room-name-edit {
+    font-size: 18px;
+    font-weight: 800;
+    border: 1.5px solid var(--accent);
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: #fff;
+    font-family: inherit;
+    color: var(--ink);
+    outline: none;
+    width: 220px;
+  }
+  .online-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--ink-faint);
+    font-weight: 600;
+  }
+  .online-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #ddd;
+  }
+  .online-dot.live { background: #4fc088; }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .top-btn {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    background: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--ink-soft);
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .top-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .top-btn.accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .top-btn.accent:hover { background: var(--accent-deep); }
+
+  .quote-line {
+    max-width: 1180px;
+    margin: 14px auto 0;
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-faint);
+    font-style: italic;
+    letter-spacing: .5px;
+  }
+
+  /* ── Main layout ── */
+  .app {
+    max-width: 1180px;
+    margin: 16px auto;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    padding: 0 24px 24px;
+  }
+
+  /* ── Calendar ── */
+  .calendar-card {
+    background: var(--card-trans);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 32px 32px;
+    position: relative;
+  }
+  .cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    position: relative;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .cal-title { display: flex; align-items: baseline; gap: 10px; }
+  .cal-title .y { font-size: 34px; font-weight: 800; letter-spacing: -1px; }
+  .cal-title .ym-sep { color: var(--ink-faint); font-weight: 300; }
+  .cal-title .m { font-size: 34px; font-weight: 800; color: var(--accent); letter-spacing: -1px; }
+  .cal-title .m-label { font-size: 14px; color: var(--ink-faint); margin-left: 4px; }
+  .nav { display: flex; align-items: center; gap: 8px; }
+  .nav button {
+    width: 38px; height: 38px;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--ink-soft);
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .nav button:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .nav .today-btn { width: auto; padding: 0 16px; border-radius: 19px; font-size: 13px; font-weight: 600; }
+  .nav .jump-btn { width: auto; padding: 0 14px; border-radius: 19px; font-size: 13px; font-weight: 600; }
+
+  /* ── Jump popover ── */
+  .jump-popover {
+    position: absolute;
+    top: 70px;
+    right: 32px;
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 20px 22px;
+    z-index: 60;
+    display: none;
+    width: 300px;
+    animation: pop .18s ease;
+  }
+  .jump-popover.show { display: block; }
+  .jump-popover .jp-section { margin-bottom: 14px; }
+  .jump-popover .jp-section:last-child { margin-bottom: 0; }
+  .jump-popover .jp-label { font-size: 11px; color: var(--ink-faint); font-weight: 700; letter-spacing: .5px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+  .jump-popover .jp-label .jp-y-nav { display: flex; gap: 6px; }
+  .jump-popover .jp-label .jp-y-nav button {
+    width: 24px; height: 24px; border: 1px solid var(--line); background: #fff;
+    border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--ink-soft);
+    display: flex; align-items: center; justify-content: center; transition: all .12s;
+  }
+  .jump-popover .jp-label .jp-y-nav button:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .jump-year-display { font-size: 20px; font-weight: 800; color: var(--ink); }
+  .jump-month-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .jump-month-grid button {
+    padding: 8px 0; border: 1px solid var(--line); background: #fff;
+    border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+    color: var(--ink-soft); transition: all .12s; font-family: inherit;
+  }
+  .jump-month-grid button:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .jump-month-grid button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .jump-popover .jp-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .jump-popover .jp-actions button { flex: 1; padding: 8px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; }
+  .jump-popover .jp-today { background: var(--accent); color: #fff; }
+  .jump-popover .jp-today:hover { background: var(--accent-deep); }
+  .jump-popover .jp-close { background: #f0ede8; color: var(--ink-soft); }
+  .jump-popover .jp-close:hover { background: #e6e2db; }
+  .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 8px; }
+  .weekdays div {
+    text-align: center; font-size: 12px; color: var(--ink-faint);
+    font-weight: 600; padding: 8px 0; letter-spacing: 1px;
+  }
+  .weekdays div.weekend { color: var(--accent); }
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .day {
+    aspect-ratio: 1 / 0.95;
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    transition: all .15s;
+    border: 1.5px solid transparent;
+    background: #faf8f4;
+    overflow: hidden;
+  }
+  .day:hover { background: #fff; border-color: var(--line); box-shadow: var(--shadow); transform: translateY(-1px); }
+  .day.other-month { opacity: 0.35; background: transparent; }
+  .day .num { font-size: 15px; font-weight: 600; }
+  .day.other-month .num { color: var(--ink-faint); }
+  .day.weekend .num { color: var(--accent); }
+  .day.today { background: var(--accent); }
+  .day.today .num { color: #fff; }
+  .day.today .badge-text { color: #fff !important; }
+  .day.today .ann-dot { background: #fff; }
+  .day.has-ann { background: var(--accent-soft); border-color: rgba(217,100,89,0.25); }
+  .day.today.has-ann { background: var(--accent); }
+  .day .ann-list { margin-top: 3px; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+  .day .badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+  .day .ann-dots { position: absolute; bottom: 6px; left: 8px; display: flex; gap: 3px; }
+  .ann-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+
+  /* ── Sidebar ── */
+  .sidebar { display: flex; flex-direction: column; gap: 16px; }
+  .panel {
+    background: var(--card-trans);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px 24px;
+  }
+  .panel h3 { font-size: 13px; color: var(--ink-faint); font-weight: 700; letter-spacing: 1px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .panel h3 .count { background: var(--accent-soft); color: var(--accent); font-size: 11px; padding: 1px 8px; border-radius: 10px; }
+  .stat-row { display: flex; gap: 12px; margin-bottom: 4px; }
+  .stat { flex: 1; background: #faf8f4; border-radius: var(--radius-sm); padding: 14px; text-align: center; }
+  .stat .v { font-size: 26px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .stat .l { font-size: 11px; color: var(--ink-faint); margin-top: 6px; letter-spacing: .5px; }
+  .stat:nth-child(2) .v { color: var(--gold); }
+  .stat:nth-child(3) .v { color: var(--green); }
+
+  .upcoming-list { display: flex; flex-direction: column; gap: 10px; }
+  .up-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: var(--radius-sm);
+    background: #faf8f4; cursor: pointer; transition: all .15s;
+  }
+  .up-item:hover { background: var(--accent-soft); }
+  .up-item .up-date { text-align: center; min-width: 46px; }
+  .up-item .up-date .d { font-size: 22px; font-weight: 800; line-height: 1; color: var(--accent); }
+  .up-item .up-date .m { font-size: 10px; color: var(--ink-faint); margin-top: 3px; }
+  .up-item .up-info { flex: 1; min-width: 0; }
+  .up-item .up-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .up-item .up-desc { font-size: 11px; color: var(--ink-faint); margin-top: 2px; }
+  .up-item .up-count { font-size: 11px; font-weight: 700; color: var(--accent); background: #fff; padding: 4px 9px; border-radius: 10px; white-space: nowrap; }
+  .empty-hint { text-align: center; color: var(--ink-faint); font-size: 13px; padding: 20px 0; }
+
+  /* ── Modal ── */
+  .modal-mask {
+    position: fixed; inset: 0;
+    background: rgba(40,30,25,0.35);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+  }
+  .modal-mask.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 20px;
+    box-shadow: var(--shadow-lg);
+    width: 100%; max-width: 480px;
+    max-height: 86vh; overflow: hidden;
+    display: flex; flex-direction: column;
+    animation: pop .2s ease;
+  }
+  @keyframes pop { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal-head { padding: 22px 26px 16px; border-bottom: 1px solid var(--line); }
+  .modal-head .mh-date { font-size: 13px; color: var(--ink-faint); font-weight: 600; }
+  .modal-head .mh-title { font-size: 22px; font-weight: 800; margin-top: 4px; }
+  .modal-head .mh-title.today-tag { color: var(--accent); }
+  .modal-body { padding: 18px 26px; overflow-y: auto; flex: 1; }
+  .modal-foot { padding: 16px 26px; border-top: 1px solid var(--line); display: flex; gap: 10px; justify-content: flex-end; }
+
+  .ann-section-label { font-size: 12px; color: var(--ink-faint); font-weight: 700; letter-spacing: .5px; margin-bottom: 10px; }
+  .ann-card {
+    background: #faf8f4; border-radius: var(--radius-sm);
+    padding: 12px 14px; margin-bottom: 10px;
+    display: flex; align-items: flex-start; gap: 12px;
+    border-left: 3px solid var(--accent);
+  }
+  .ann-card.c-gold { border-left-color: var(--gold); }
+  .ann-card.c-green { border-left-color: var(--green); }
+  .ann-card.c-blue { border-left-color: var(--blue); }
+  .ann-card.c-purple { border-left-color: var(--purple); }
+  .ann-card .ann-media { flex-shrink: 0; }
+  .ann-card .ann-emoji { font-size: 24px; line-height: 1; }
+  .ann-card .ann-img { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; cursor: pointer; }
+  .ann-card .ann-main { flex: 1; min-width: 0; }
+  .ann-card .ann-t { font-size: 15px; font-weight: 700; }
+  .ann-card .ann-d { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+  .ann-card .ann-meta { font-size: 11px; color: var(--ink-faint); margin-top: 5px; }
+  .ann-card .ann-del {
+    background: none; border: none; color: var(--ink-faint);
+    cursor: pointer; font-size: 16px; padding: 2px 4px;
+    border-radius: 6px; transition: all .15s;
+  }
+  .ann-card .ann-del:hover { color: var(--accent); background: var(--accent-soft); }
+
+  .image-preview {
+    margin-top: 10px; position: relative; display: inline-block;
+  }
+  .image-preview img {
+    max-width: 100%; max-height: 160px; border-radius: 10px; object-fit: cover;
+  }
+  .image-preview .rm-img {
+    position: absolute; top: -6px; right: -6px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); color: #fff; border: none;
+    cursor: pointer; font-size: 14px; display: flex;
+    align-items: center; justify-content: center;
+  }
+
+  .form-row { margin-bottom: 14px; }
+  .form-row label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+  .form-row input[type="text"],
+  .form-row textarea {
+    width: 100%; border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 10px 12px;
+    font-size: 14px; font-family: inherit; color: var(--ink);
+    background: #fff; transition: border-color .15s;
+  }
+  .form-row input:focus, .form-row textarea:focus { outline: none; border-color: var(--accent); }
+  .form-row textarea { resize: vertical; min-height: 60px; }
+
+  .file-upload-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 8px;
+    border: 1.5px dashed var(--line); background: #faf8f4;
+    font-size: 13px; color: var(--ink-soft); cursor: pointer;
+    font-family: inherit; transition: all .15s;
+  }
+  .file-upload-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+  .emoji-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+  .emoji-pick span {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; cursor: pointer; font-size: 18px;
+    border: 1.5px solid transparent; transition: all .12s;
+  }
+  .emoji-pick span:hover { background: var(--accent-soft); }
+  .emoji-pick span.on { background: var(--accent-soft); border-color: var(--accent); }
+
+  .color-pick { display: flex; gap: 8px; }
+  .color-pick span {
+    width: 26px; height: 26px; border-radius: 50%;
+    cursor: pointer; border: 3px solid transparent; transition: all .12s;
+  }
+  .color-pick span.on { border-color: var(--ink); }
+
+  .toggle-row { display: flex; align-items: center; gap: 10px; }
+  .switch {
+    position: relative; width: 42px; height: 24px;
+    background: #ddd; border-radius: 12px; cursor: pointer;
+    transition: background .2s; flex-shrink: 0;
+  }
+  .switch.on { background: var(--accent); }
+  .switch::after {
+    content: ''; position: absolute; top: 3px; left: 3px;
+    width: 18px; height: 18px; background: #fff;
+    border-radius: 50%; transition: transform .2s;
+  }
+  .switch.on::after { transform: translateX(18px); }
+  .toggle-row .t-label { font-size: 13px; color: var(--ink-soft); }
+
+  .btn {
+    padding: 9px 20px; border-radius: var(--radius-sm);
+    border: none; font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-deep); }
+  .btn-ghost { background: #f0ede8; color: var(--ink-soft); }
+  .btn-ghost:hover { background: #e6e2db; }
+  .btn-add {
+    width: 100%; padding: 11px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1.5px dashed rgba(217,100,89,0.4);
+    border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+    font-family: inherit;
+  }
+  .btn-add:hover { background: rgba(217,100,89,0.12); }
+  .add-form { display: none; }
+  .add-form.show { display: block; }
+
+  /* ── Settings Modal ── */
+  .settings-grid { display: flex; flex-direction: column; gap: 18px; }
+  .settings-grid label { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+  .bg-gradients { display: flex; gap: 8px; flex-wrap: wrap; }
+  .bg-gradients div {
+    width: 52px; height: 52px; border-radius: 10px;
+    cursor: pointer; border: 2px solid transparent;
+    transition: all .15s;
+  }
+  .bg-gradients div:hover { transform: scale(1.08); }
+  .bg-gradients div.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .bg-solid { display: flex; gap: 8px; flex-wrap: wrap; }
+  .bg-solid div {
+    width: 38px; height: 38px; border-radius: 50%;
+    cursor: pointer; border: 3px solid transparent;
+    transition: all .15s;
+  }
+  .bg-solid div.on { border-color: var(--ink); }
+
+  /* ── Share Modal ── */
+  .share-box {
+    display: flex; align-items: center; gap: 10px;
+    background: #faf8f4; border-radius: var(--radius-sm);
+    padding: 14px;
+  }
+  .share-code {
+    font-size: 28px; font-weight: 800; letter-spacing: 6px; color: var(--accent);
+  }
+  .share-url { font-size: 12px; color: var(--ink-faint); word-break: break-all; margin-top: 12px; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: #fff; padding: 11px 22px;
+    border-radius: 24px; font-size: 13px;
+    opacity: 0; transition: all .25s; z-index: 200; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; padding: 0 14px 14px; }
+    .calendar-card { padding: 20px 16px; }
+    .cal-title .y, .cal-title .m { font-size: 26px; }
+    .day { padding: 4px 5px; }
+    .day .num { font-size: 13px; }
+    .topbar { padding: 10px 14px; }
+    .jump-popover { right: 16px; width: 260px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="room-name" id="roomName" title="点击修改空间名称">加载中…</span>
+    <div class="online-badge">
+      <span class="online-dot" id="onlineDot"></span>
+      <span id="onlineText">1 人在线</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="top-btn" id="shareBtn">🔗 分享</button>
+    <button class="top-btn" id="settingsBtn">🎨 背景</button>
+  </div>
+</div>
+<div class="quote-line">「我们每天度过的日常，都是连续不断的奇迹」</div>
+
+<div class="app">
+  <!-- Calendar -->
+  <div class="calendar-card">
+    <div class="cal-header">
+      <div class="cal-title">
+        <span class="y" id="yearLabel"></span>
+        <span class="ym-sep">·</span>
+        <span class="m" id="monthLabel"></span>
+        <span class="m-label">月</span>
+      </div>
+      <div class="nav">
+        <button id="prevBtn" title="上个月">‹</button>
+        <button class="today-btn" id="todayBtn">今天</button>
+        <button class="jump-btn" id="jumpBtn" title="跳转到指定年月">📅 跳转</button>
+        <button id="nextBtn" title="下个月">›</button>
+      </div>
+    </div>
+    <div class="jump-popover" id="jumpPopover">
+      <div class="jp-section">
+        <div class="jp-label">
+          <span>选择年份</span>
+          <div class="jp-y-nav">
+            <button id="jpYPrev" title="前10年">‹‹</button>
+            <button id="jpYNext" title="后10年">››</button>
+          </div>
+        </div>
+        <div class="jump-year-display" id="jpYearDisplay"></div>
+      </div>
+      <div class="jp-section">
+        <div class="jp-label"><span>选择月份</span></div>
+        <div class="jump-month-grid" id="jpMonthGrid"></div>
+      </div>
+      <div class="jp-actions">
+        <button class="jp-today" id="jpToday">回到今天</button>
+        <button class="jp-close" id="jpClose">关闭</button>
+      </div>
+    </div>
+    <div class="weekdays">
+      <div class="weekend">日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div>
+    </div>
+    <div class="days" id="daysGrid"></div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="panel">
+      <h3>概览</h3>
+      <div class="stat-row">
+        <div class="stat"><div class="v" id="statTotal">0</div><div class="l">纪念日总数</div></div>
+        <div class="stat"><div class="v" id="statMonth">0</div><div class="l">本月</div></div>
+        <div class="stat"><div class="v" id="statUpcoming">0</div><div class="l">30天内</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>即将到来 <span class="count" id="upCount">0</span></h3>
+      <input class="search-box" id="searchBox" placeholder="搜索纪念日…" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;background:#faf8f4;color:var(--ink);margin-bottom:14px;">
+      <div class="upcoming-list" id="upcomingList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Day Modal -->
+<div class="modal-mask" id="dayModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="mh-date" id="mhDate"></div>
+      <div class="mh-title" id="mhTitle"></div>
+    </div>
+    <div class="modal-body">
+      <div id="annListWrap">
+        <div class="ann-section-label">这一天的纪念日</div>
+        <div id="annList"></div>
+      </div>
+      <button class="btn-add" id="showAddBtn">＋ 添加纪念日</button>
+      <div class="add-form" id="addForm">
+        <div class="ann-section-label" style="margin-top:16px">新建纪念日</div>
+        <div class="form-row">
+          <label>名称 <span style="color:var(--accent)">*</span></label>
+          <input type="text" id="fTitle" placeholder="比如：在一起的日子" maxlength="30">
+        </div>
+        <div class="form-row">
+          <label>描述（可选）</label>
+          <textarea id="fDesc" placeholder="写点什么…" maxlength="120"></textarea>
+        </div>
+        <div class="form-row">
+          <label>照片（可选）</label>
+          <label class="file-upload-btn" for="fImage">📷 上传照片</label>
+          <input type="file" id="fImage" accept="image/*" style="display:none;">
+          <div id="imagePreview" class="image-preview" style="display:none"></div>
+        </div>
+        <div class="form-row">
+          <label>图标</label>
+          <div class="emoji-pick" id="emojiPick"></div>
+        </div>
+        <div class="form-row">
+          <label>颜色标签</label>
+          <div class="color-pick" id="colorPick"></div>
+        </div>
+        <div class="form-row">
+          <label>重复</label>
+          <div class="toggle-row">
+            <div class="switch" id="repeatSwitch"></div>
+            <span class="t-label">每年重复</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="closeDayBtn">关闭</button>
+      <button class="btn btn-primary" id="saveBtn">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-mask" id="settingsModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="mh-title">背景设置</div>
+    </div>
+    <div class="modal-body">
+      <div class="settings-grid">
+        <div>
+          <label>上传自定义背景</label>
+          <label class="file-upload-btn" for="bgImage">📁 选择背景图</label>
+          <input type="file" id="bgImage" accept="image/*" style="display:none;">
+        </div>
+        <div>
+          <label>预设渐变</label>
+          <div class="bg-gradients" id="bgGradients"></div>
+        </div>
+        <div>
+          <label>纯色 / 无背景</label>
+          <div class="bg-solid" id="bgSolid"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="closeSettingsBtn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Share Modal -->
+<div class="modal-mask" id="shareModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="mh-title">邀请好友加入</div>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--ink-soft);margin-bottom:14px;">把房间码分享给好友，他们加入后可以一起编辑纪念日</p>
+      <div class="share-box">
+        <div class="share-code" id="shareCode"></div>
+      </div>
+      <button class="btn btn-primary" id="copyLinkBtn" style="width:100%;margin-top:12px;">📋 复制分享链接</button>
+      <div class="share-url" id="shareUrl"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="closeShareBtn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+// ── roomId from URL ──
+const pathParts = window.location.pathname.split('/');
+const roomId = pathParts[pathParts.length-1] || 'DEMO';
+
+// ── helpers ──
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2,'0');
+const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,dd]=s.split('-').map(Number); return new Date(y,m-1,dd); };
+const sameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+const isToday = d => sameDay(d, new Date());
+const el = (t,cls) => { const e=document.createElement(t); if(cls) e.className=cls; return e; };
+
+const EMOJIS = ["❤️","🎂","💍","🌹","⭐","🌙","🎈","✈️","🏠","🎓","🏆","🐾","☕","📷","🎵","🎁"];
+const COLORS = [
+  {key:"red",   cls:"",       hex:"#d96459"},
+  {key:"gold",  cls:"c-gold", hex:"#d4a24c"},
+  {key:"green", cls:"c-green",hex:"#6b9b7e"},
+  {key:"blue",  cls:"c-blue", hex:"#6b8db4"},
+  {key:"purple",cls:"c-purple",hex:"#9b7bb4"}
+];
+
+// ── State ──
+let data = { anniversaries: [], settings: { background: null, name: '' } };
+let view = new Date(); view.setDate(1);
+let selectedDate = null;
+let formState = { emoji: EMOJIS[0], color: COLORS[0].key, repeat: false, image: '' };
+let ws = null;
+let wsConnected = false;
+
+// ── Apply background ──
+function applyBg() {
+  const bg = (data.settings && data.settings.background) || null;
+  document.body.classList.remove('custom-bg');
+  document.body.style.background = '';
+  document.body.style.backgroundImage = '';
+  if (!bg) return;
+  if (bg.type === 'image') {
+    document.body.style.backgroundImage = `url(${bg.value})`;
+    document.body.classList.add('custom-bg');
+  } else if (bg.type === 'gradient') {
+    document.body.style.backgroundImage = bg.value;
+    document.body.classList.add('custom-bg');
+  } else if (bg.type === 'color') {
+    document.body.style.backgroundColor = bg.value;
+  }
+}
+
+// ── WebSocket ──
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/?room=${roomId}`);
+
+  ws.onopen = () => {
+    wsConnected = true;
+  };
+
+  ws.onmessage = (e) => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch (_) { return; }
+    if (msg.type === 'init') {
+      data = { anniversaries: msg.data.anniversaries || [], settings: msg.data.settings || { background: null, name: '' } };
+      dataLoaded = true;
+      applyBg();
+      updatePresence(msg.count || 1);
+      render();
+      renderSidebar();
+      updateRoomName();
+    } else if (msg.type === 'add' || msg.type === 'update' || msg.type === 'delete') {
+      // reload from server to stay consistent
+      reloadData();
+    } else if (msg.type === 'settings') {
+      data.settings = { ...data.settings, ...(msg.settings || {}) };
+      applyBg();
+      renderSidebar();
+      updateRoomName();
+    } else if (msg.type === 'presence') {
+      updatePresence(msg.count || 0);
+    }
+  };
+
+  ws.onclose = () => {
+    wsConnected = false;
+    updatePresence(0);
+    setTimeout(connectWS, 3000);
+  };
+
+  ws.onerror = () => {};
+}
+
+function send(msg) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
+}
+
+async function reloadData() {
+  try {
+    const res = await fetch('/api/room/' + roomId);
+    const d = await res.json();
+    data = { anniversaries: d.anniversaries || [], settings: d.settings || { background: null, name: '' } };
+  } catch (_) { /* use local */ }
+  applyBg();
+  render();
+  renderSidebar();
+}
+
+function updatePresence(count) {
+  const dot = $('#onlineDot');
+  const txt = $('#onlineText');
+  if (count > 0) {
+    dot.classList.add('live');
+    txt.textContent = count + ' 人在线';
+  } else {
+    dot.classList.remove('live');
+    txt.textContent = '离线';
+  }
+}
+
+// ── Room name ──
+function updateRoomName() {
+  const n = data.settings && data.settings.name ? data.settings.name : '我们的纪念日';
+  $('#roomName').textContent = n;
+}
+
+let dataLoaded = false;
+
+function editRoomName() {
+  const span = $('#roomName');
+  const old = span.textContent;
+  const input = document.createElement('input');
+  input.className = 'room-name-edit';
+  input.value = old;
+  input.maxLength = 40;
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+  const save = () => {
+    const val = input.value.trim() || '我们的纪念日';
+    const newSpan = document.createElement('span');
+    newSpan.className = 'room-name';
+    newSpan.id = 'roomName';
+    newSpan.textContent = val;
+    newSpan.title = '点击修改空间名称';
+    newSpan.addEventListener('click', editRoomName);
+    input.replaceWith(newSpan);
+    data.settings.name = val;
+    send({ type: 'settings', settings: data.settings });
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { input.blur(); } });
+}
+$('#roomName').addEventListener('click', editRoomName);
+
+// ── Calendar rendering ──
+function render() {
+  const y = view.getFullYear(), m = view.getMonth();
+  $('#yearLabel').textContent = y;
+  $('#monthLabel').textContent = m + 1;
+
+  const first = new Date(y, m, 1);
+  const startWeekday = first.getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const grid = $('#daysGrid');
+  grid.innerHTML = '';
+
+  const prevDays = new Date(y, m, 0).getDate();
+  for (let i = startWeekday - 1; i >= 0; i--) {
+    grid.appendChild(makeDayCell(new Date(y, m - 1, prevDays - i), true));
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    grid.appendChild(makeDayCell(new Date(y, m, d), false));
+  }
+  const filled = startWeekday + daysInMonth;
+  const remain = (7 - filled % 7) % 7;
+  for (let d = 1; d <= remain; d++) {
+    grid.appendChild(makeDayCell(new Date(y, m + 1, d), true));
+  }
+  while (grid.children.length < 42) {
+    const nd = remain + grid.children.length - filled;
+    grid.appendChild(makeDayCell(new Date(y, m + 1, nd + 1), true));
+  }
+}
+
+function annsForDateRecurring(date) {
+  const md = pad(date.getMonth() + 1) + '-' + pad(date.getDate());
+  return (data.anniversaries || []).filter(a => {
+    if (a.date === fmt(date)) return true;
+    if (a.repeat) {
+      const aDate = parse(a.date);
+      return pad(aDate.getMonth() + 1) + '-' + pad(aDate.getDate()) === md && aDate <= date;
+    }
+    return false;
+  });
+}
+
+function makeDayCell(date, otherMonth) {
+  const cell = el('div', 'day');
+  if (otherMonth) cell.classList.add('other-month');
+  const dow = date.getDay();
+  if (dow === 0 || dow === 6) cell.classList.add('weekend');
+  if (isToday(date)) cell.classList.add('today');
+
+  const num = el('div', 'num');
+  num.textContent = date.getDate();
+  cell.appendChild(num);
+
+  const list = annsForDateRecurring(date);
+  if (list.length) {
+    cell.classList.add('has-ann');
+    const annList = el('div', 'ann-list');
+    list.slice(0, 2).forEach(a => {
+      const badge = el('div', 'badge badge-text');
+      const co = COLORS.find(c => c.key === a.color) || COLORS[0];
+      const r = parseInt(co.hex.slice(1, 3), 16), g = parseInt(co.hex.slice(3, 5), 16), b = parseInt(co.hex.slice(5, 7), 16);
+      badge.style.background = `rgba(${r},${g},${b},0.12)`;
+      badge.style.color = co.hex;
+      badge.textContent = (a.emoji || '') + ' ' + a.title;
+      annList.appendChild(badge);
+    });
+    cell.appendChild(annList);
+  }
+  cell.addEventListener('click', () => openDayModal(date));
+  return cell;
+}
+
+// ── Day Modal ──
+function openDayModal(date) {
+  selectedDate = date;
+  $('#mhDate').textContent = `${date.getFullYear()}年${date.getMonth()+1}月${date.getDate()}日 · ${'日一二三四五六'[date.getDay()]}曜`;
+  const t = $('#mhTitle');
+  t.textContent = isToday(date) ? '今天' : '这一天';
+  t.classList.toggle('today-tag', isToday(date));
+  renderAnnList();
+  $('#addForm').classList.remove('show');
+  resetForm();
+  $('#showAddBtn').style.display = '';
+  $('#dayModal').classList.add('show');
+}
+
+function renderAnnList() {
+  const wrap = $('#annList');
+  wrap.innerHTML = '';
+  const list = annsForDateRecurring(selectedDate);
+  if (!list.length) {
+    const hint = el('div', 'empty-hint');
+    hint.textContent = '还没有纪念日，点击下方添加';
+    wrap.appendChild(hint);
+    return;
+  }
+  list.sort((a, b) => parse(a.date) - parse(b.date)).forEach(a => {
+    const card = el('div', 'ann-card');
+    const co = COLORS.find(c => c.key === a.color) || COLORS[0];
+    if (co.cls) card.classList.add(co.cls);
+
+    const media = el('div', 'ann-media');
+    if (a.image) {
+      const img = el('img', 'ann-img');
+      img.src = a.image; img.alt = a.title;
+      img.addEventListener('click', () => window.open(a.image, '_blank'));
+      media.appendChild(img);
+    } else {
+      const em = el('div', 'ann-emoji');
+      em.textContent = a.emoji || '🎈';
+      media.appendChild(em);
+    }
+
+    const main = el('div', 'ann-main');
+    const tt = el('div', 'ann-t'); tt.textContent = a.title; main.appendChild(tt);
+    if (a.desc) { const dd = el('div', 'ann-d'); dd.textContent = a.desc; main.appendChild(dd); }
+    const meta = el('div', 'ann-meta');
+    const aDate = parse(a.date);
+    let mt = aDate.getFullYear() !== selectedDate.getFullYear() ? `始于 ${aDate.getFullYear()}` : '今年';
+    if (a.repeat) {
+      const yrs = selectedDate.getFullYear() - aDate.getFullYear();
+      if (yrs > 0) mt += ` · 第 ${yrs} 周年`;
+    }
+    meta.textContent = mt + (a.repeat ? ' · 每年重复' : '');
+    main.appendChild(meta);
+
+    const del = el('button', 'ann-del'); del.innerHTML = '✕';
+    del.addEventListener('click', e => {
+      e.stopPropagation();
+      if (confirm(`删除「${a.title}」？`)) {
+        send({ type: 'delete', id: a.id });
+        data.anniversaries = data.anniversaries.filter(x => x.id !== a.id);
+        renderAnnList(); renderSidebar(); render(); toast('已删除');
+      }
+    });
+
+    card.appendChild(media); card.appendChild(main); card.appendChild(del);
+    wrap.appendChild(card);
+  });
+}
+
+function resetForm() {
+  $('#fTitle').value = ''; $('#fDesc').value = '';
+  formState = { emoji: EMOJIS[0], color: COLORS[0].key, repeat: false, image: '' };
+  $('#repeatSwitch').classList.remove('on');
+  hideImagePreview();
+  buildEmojiPick(); buildColorPick();
+}
+
+function hideImagePreview() {
+  $('#imagePreview').style.display = 'none';
+  $('#imagePreview').innerHTML = '';
+  $('#fImage').value = '';
+}
+
+function buildEmojiPick() {
+  const p = $('#emojiPick'); p.innerHTML = '';
+  EMOJIS.forEach(e => {
+    const s = el('span'); s.textContent = e;
+    if (e === formState.emoji) s.classList.add('on');
+    s.addEventListener('click', () => { formState.emoji = e; buildEmojiPick(); });
+    p.appendChild(s);
+  });
+}
+
+function buildColorPick() {
+  const p = $('#colorPick'); p.innerHTML = '';
+  COLORS.forEach(c => {
+    const s = el('span'); s.style.background = c.hex;
+    s.style.borderColor = 'var(--line)';
+    if (c.key === formState.color) { s.classList.add('on'); s.style.borderColor = 'var(--ink)'; }
+    s.addEventListener('click', () => { formState.color = c.key; buildColorPick(); });
+    p.appendChild(s);
+  });
+}
+
+// Image upload
+$('#fImage').addEventListener('change', async () => {
+  const file = $('#fImage').files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('image', file);
+  try {
+    toast('上传中…');
+    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const d = await res.json();
+    if (d.url) {
+      formState.image = d.url;
+      const el = $('#imagePreview');
+      el.style.display = 'inline-block';
+      el.innerHTML = `<img src="${d.url}" alt="预览"><button class="rm-img" onclick="(()=>{document.getElementById('imagePreview').style.display='none';document.getElementById('imagePreview').innerHTML='';document.getElementById('fImage').value='';window._fs_image='';})()">×</button>`;
+      window._fs_image = d.url;
+    }
+  } catch (e) {
+    toast('上传失败，请重试');
+  }
+});
+
+// ── Day modal actions ──
+$('#showAddBtn').addEventListener('click', () => {
+  $('#addForm').classList.add('show');
+  $('#showAddBtn').style.display = 'none';
+  $('#fTitle').focus();
+});
+
+$('#repeatSwitch').addEventListener('click', () => {
+  formState.repeat = !formState.repeat;
+  $('#repeatSwitch').classList.toggle('on', formState.repeat);
+});
+
+$('#closeDayBtn').addEventListener('click', () => $('#dayModal').classList.remove('show'));
+$('#dayModal').addEventListener('click', e => { if (e.target === $('#dayModal')) $('#dayModal').classList.remove('show'); });
+
+$('#saveBtn').addEventListener('click', () => {
+  if (!$('#addForm').classList.contains('show')) { $('#dayModal').classList.remove('show'); return; }
+  const title = $('#fTitle').value.trim();
+  if (!title) { toast('请填写名称'); $('#fTitle').focus(); return; }
+  const ann = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    date: fmt(selectedDate),
+    title,
+    desc: $('#fDesc').value.trim(),
+    emoji: formState.emoji,
+    color: formState.color,
+    repeat: formState.repeat,
+    image: window._fs_image || formState.image || '',
+  };
+  send({ type: 'add', ann });
+  data.anniversaries.push(ann);
+  $('#addForm').classList.remove('show');
+  $('#showAddBtn').style.display = '';
+  $('#fTitle').value = ''; $('#fDesc').value = '';
+  hideImagePreview();
+  renderAnnList(); renderSidebar(); render();
+  toast('已添加 ✨');
+});
+
+// ── Calendar navigation ──
+$('#prevBtn').addEventListener('click', () => { view.setMonth(view.getMonth() - 1); render(); });
+$('#nextBtn').addEventListener('click', () => { view.setMonth(view.getMonth() + 1); render(); });
+$('#todayBtn').addEventListener('click', () => { view = new Date(); view.setDate(1); render(); });
+
+// ── Jump popover ──
+let jpYear = view.getFullYear();
+const MONTH_NAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+function buildJumpPopover() {
+  jpYear = view.getFullYear();
+  const yearDisplay = $('#jpYearDisplay');
+  yearDisplay.textContent = jpYear + ' 年';
+  const grid = $('#jpMonthGrid');
+  grid.innerHTML = '';
+  const curY = view.getFullYear();
+  const curM = view.getMonth();
+  for (let i = 0; i < 12; i++) {
+    const btn = el('button');
+    btn.textContent = (i + 1) + '月';
+    if (jpYear === curY && i === curM) btn.classList.add('on');
+    btn.addEventListener('click', () => {
+      view = new Date(jpYear, i, 1);
+      render();
+      $('#jumpPopover').classList.remove('show');
+    });
+    grid.appendChild(btn);
+  }
+}
+
+$('#jumpBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const pop = $('#jumpPopover');
+  const isShow = pop.classList.contains('show');
+  if (isShow) {
+    pop.classList.remove('show');
+  } else {
+    buildJumpPopover();
+    pop.classList.add('show');
+  }
+});
+
+$('#jpYPrev').addEventListener('click', e => {
+  e.stopPropagation();
+  jpYear -= 1;
+  buildJumpPopover();
+  $('#jpYearDisplay').textContent = jpYear + ' 年';
+  // Re-check: update month grid highlight based on whether jpYear matches current view year
+  const grid = $('#jpMonthGrid');
+  const curY = view.getFullYear();
+  const curM = view.getMonth();
+  Array.from(grid.children).forEach((btn, i) => {
+    btn.classList.toggle('on', jpYear === curY && i === curM);
+  });
+});
+
+$('#jpYNext').addEventListener('click', e => {
+  e.stopPropagation();
+  jpYear += 1;
+  buildJumpPopover();
+  $('#jpYearDisplay').textContent = jpYear + ' 年';
+  const grid = $('#jpMonthGrid');
+  const curY = view.getFullYear();
+  const curM = view.getMonth();
+  Array.from(grid.children).forEach((btn, i) => {
+    btn.classList.toggle('on', jpYear === curY && i === curM);
+  });
+});
+
+$('#jpToday').addEventListener('click', e => {
+  e.stopPropagation();
+  view = new Date(); view.setDate(1);
+  render();
+  $('#jumpPopover').classList.remove('show');
+});
+
+$('#jpClose').addEventListener('click', e => {
+  e.stopPropagation();
+  $('#jumpPopover').classList.remove('show');
+});
+
+// Close popover when clicking outside
+document.addEventListener('click', e => {
+  const pop = $('#jumpPopover');
+  if (!pop.classList.contains('show')) return;
+  if (pop.contains(e.target) || e.target.closest('#jumpBtn')) return;
+  pop.classList.remove('show');
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if ($('#dayModal').classList.contains('show')) $('#dayModal').classList.remove('show');
+    else if ($('#settingsModal').classList.contains('show')) $('#settingsModal').classList.remove('show');
+    else if ($('#shareModal').classList.contains('show')) $('#shareModal').classList.remove('show');
+    return;
+  }
+  if ($('#dayModal').classList.contains('show') || $('#settingsModal').classList.contains('show') || $('#shareModal').classList.contains('show')) return;
+  if (e.key === 'ArrowLeft') { view.setMonth(view.getMonth() - 1); render(); }
+  if (e.key === 'ArrowRight') { view.setMonth(view.getMonth() + 1); render(); }
+});
+
+// ── Sidebar ──
+function renderSidebar() {
+  const q = ($('#searchBox').value || '').trim().toLowerCase();
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+
+  $('#statTotal').textContent = (data.anniversaries || []).length;
+  const monthCount = (data.anniversaries || []).filter(a => {
+    const d = parse(a.date); return d.getMonth() === view.getMonth();
+  }).length;
+  $('#statMonth').textContent = monthCount;
+
+  let items = (data.anniversaries || []).map(a => {
+    const base = parse(a.date);
+    let next;
+    if (a.repeat) {
+      next = new Date(now.getFullYear(), base.getMonth(), base.getDate());
+      if (next < now || (sameDay(next, now) && now.getHours() === 0)) next = new Date(now.getFullYear() + 1, base.getMonth(), base.getDate());
+      if (next < now) next = new Date(now.getFullYear() + 1, base.getMonth(), base.getDate());
+    } else {
+      next = base;
+    }
+    return { a, next, days: Math.round((next - now) / 86400000) };
+  });
+  if (q) items = items.filter(it => (it.a.title + (it.a.desc || '')).toLowerCase().includes(q));
+  items.sort((x, y) => x.next - y.next);
+
+  $('#statUpcoming').textContent = items.filter(it => it.days >= 0 && it.days <= 30).length;
+  $('#upCount').textContent = items.filter(it => it.days >= 0).length;
+
+  const list = $('#upcomingList');
+  list.innerHTML = '';
+  const shown = items.filter(it => it.days >= 0).slice(0, 12);
+  if (!shown.length) {
+    const h = el('div', 'empty-hint');
+    h.textContent = q ? '没有匹配的纪念日' : '还没有纪念日';
+    list.appendChild(h);
+    return;
+  }
+  shown.forEach(it => {
+    const item = el('div', 'up-item');
+    const dateBox = el('div', 'up-date');
+    const dd = el('div', 'd'); dd.textContent = it.next.getDate();
+    const mm = el('div', 'm'); mm.textContent = (it.next.getMonth() + 1) + '月';
+    dateBox.appendChild(dd); dateBox.appendChild(mm);
+    const info = el('div', 'up-info');
+    const t = el('div', 'up-title'); t.textContent = (it.a.emoji || '') + ' ' + it.a.title;
+    info.appendChild(t);
+    if (it.a.desc) { const d = el('div', 'up-desc'); d.textContent = it.a.desc; info.appendChild(d); }
+    const count = el('div', 'up-count');
+    if (it.days === 0) count.textContent = '今天';
+    else if (it.days === 1) count.textContent = '明天';
+    else count.textContent = it.days + '天后';
+    item.appendChild(dateBox); item.appendChild(info); item.appendChild(count);
+    item.addEventListener('click', () => {
+      view = new Date(it.next.getFullYear(), it.next.getMonth(), 1);
+      render();
+      openDayModal(it.next);
+    });
+    list.appendChild(item);
+  });
+}
+
+$('#searchBox').addEventListener('input', renderSidebar);
+
+// ── Settings Modal ──
+function buildBgGradients() {
+  const p = $('#bgGradients');
+  const presets = [
+    { name: '晨曦', css: 'linear-gradient(135deg, #fce4cc, #f8c7c7, #c5d5e8)' },
+    { name: '花海', css: 'linear-gradient(135deg, #f9d5e5, #e8c3d6, #c8d6e5)' },
+    { name: '森林', css: 'linear-gradient(135deg, #d4e5d4, #c5d5c5, #b8c8b8)' },
+    { name: '晚霞', css: 'linear-gradient(135deg, #f8d4c4, #e8c4b4, #d4b4a4)' },
+    { name: '星空', css: 'linear-gradient(135deg, #d4d8e8, #c4c8d8, #b4b8c8)' },
+    { name: '糖果', css: 'linear-gradient(135deg, #fce4ec, #f8d4e8, #e8c4d8)' },
+  ];
+  p.innerHTML = '';
+  const cur = (data.settings && data.settings.background) ? JSON.stringify(data.settings.background) : 'null';
+  presets.forEach(pr => {
+    const div = el('div');
+    div.style.backgroundImage = pr.css;
+    div.title = pr.name;
+    const val = JSON.stringify({ type: 'gradient', value: pr.css });
+    if (val === cur) div.classList.add('on');
+    div.addEventListener('click', () => {
+      data.settings.background = { type: 'gradient', value: pr.css };
+      applyBg();
+      send({ type: 'settings', settings: data.settings });
+      buildBgGradients(); buildBgSolid();
+    });
+    p.appendChild(div);
+  });
+}
+
+function buildBgSolid() {
+  const p = $('#bgSolid');
+  const presets = [
+    { name: '默认', color: null, style: 'linear-gradient(135deg, #f7f5f1, #ede8e0)' },
+    { name: '纯白', color: { type: 'color', value: '#f8f6f2' }, style: 'background:#f8f6f2' },
+    { name: '浅粉', color: { type: 'color', value: '#fce4ec' }, style: 'background:#fce4ec' },
+    { name: '浅蓝', color: { type: 'color', value: '#e3f2fd' }, style: 'background:#e3f2fd' },
+    { name: '浅绿', color: { type: 'color', value: '#e8f5e9' }, style: 'background:#e8f5e9' },
+    { name: '浅紫', color: { type: 'color', value: '#f3e5f5' }, style: 'background:#f3e5f5' },
+  ];
+  p.innerHTML = '';
+  const cur = (data.settings && data.settings.background) ? JSON.stringify(data.settings.background) : 'null';
+  presets.forEach(pr => {
+    const div = el('div');
+    div.style.cssText = pr.style + ';border:1px solid var(--line)';
+    div.title = pr.name;
+    const val = pr.color ? JSON.stringify(pr.color) : 'null';
+    if (val === cur) div.classList.add('on');
+    div.addEventListener('click', () => {
+      data.settings.background = pr.color;
+      applyBg();
+      send({ type: 'settings', settings: data.settings });
+      buildBgGradients(); buildBgSolid();
+    });
+    p.appendChild(div);
+  });
+}
+
+$('#settingsBtn').addEventListener('click', () => {
+  buildBgGradients();
+  buildBgSolid();
+  $('#settingsModal').classList.add('show');
+});
+
+$('#closeSettingsBtn').addEventListener('click', () => $('#settingsModal').classList.remove('show'));
+$('#settingsModal').addEventListener('click', e => { if (e.target === $('#settingsModal')) $('#settingsModal').classList.remove('show'); });
+
+// Background image upload
+$('#bgImage').addEventListener('change', async () => {
+  const file = $('#bgImage').files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('image', file);
+  try {
+    toast('上传背景中…');
+    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const d = await res.json();
+    if (d.url) {
+      data.settings.background = { type: 'image', value: d.url };
+      applyBg();
+      send({ type: 'settings', settings: data.settings });
+      toast('背景已更新');
+    }
+  } catch (e) {
+    toast('上传失败，请重试');
+  }
+});
+
+// ── Share Modal ──
+$('#shareBtn').addEventListener('click', () => {
+  $('#shareCode').textContent = roomId;
+  const url = window.location.origin + '/r/' + roomId;
+  $('#shareUrl').textContent = url;
+  $('#shareModal').classList.add('show');
+});
+
+$('#copyLinkBtn').addEventListener('click', async () => {
+  const url = window.location.origin + '/r/' + roomId;
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('链接已复制，发给好友吧');
+  } catch (e) {
+    toast('复制失败，请手动复制');
+  }
+});
+
+$('#closeShareBtn').addEventListener('click', () => $('#shareModal').classList.remove('show'));
+$('#shareModal').addEventListener('click', e => { if (e.target === $('#shareModal')) $('#shareModal').classList.remove('show'); });
+
+// ── Toast ──
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ── Init ──
+window._fs_image = '';
+connectWS();
+render();
+renderSidebar();
+
+// Initial data load before WS connects
+(async () => {
+  try {
+    const res = await fetch('/api/room/' + roomId);
+    if (!res.ok) throw new Error('not ok');
+    const d = await res.json();
+    if (!wsConnected) {
+      data = { anniversaries: d.anniversaries || [], settings: d.settings || { background: null, name: '' } };
+      dataLoaded = true;
+      applyBg();
+      render();
+      renderSidebar();
+      updateRoomName();
+    }
+  } catch (_) {}
+})();
+
+// Connection-failed guard: if data still hasn't loaded after 6s, show a hint
+setTimeout(() => {
+  if (!dataLoaded) {
+    const nameEl = document.getElementById('roomName');
+    if (nameEl) {
+      nameEl.textContent = '⚠️ 连接失败';
+      nameEl.style.color = 'var(--accent)';
+      nameEl.style.cursor = 'default';
+    }
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,0.96);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:40px;text-align:center;';
+    overlay.innerHTML = '<div style="font-size:48px;">📡</div>'
+      + '<div style="font-size:18px;font-weight:700;color:#2b2b2b;">无法连接到服务器</div>'
+      + '<div style="font-size:14px;color:#6b6b6b;max-width:400px;line-height:1.7;">'
+      + '这是一个需要后端服务的协作应用，不能直接以静态文件打开。<br><br>'
+      + '请通过服务器地址访问：<br>'
+      + '<b style="color:#d96459;font-size:16px;">http://localhost:3210</b><br><br>'
+      + '如果服务器未启动，请在项目目录运行：<br>'
+      + '<code style="background:#f0ede8;padding:4px 10px;border-radius:6px;font-size:13px;">node server.js</code>'
+      + '</div>';
+    document.body.appendChild(overlay);
+  }
+}, 6000);
+})();
+</script>
+</body>
+</html>

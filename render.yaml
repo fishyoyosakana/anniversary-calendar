@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: anniversary-calendar
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production

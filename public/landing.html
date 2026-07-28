@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>纪念日日历 · 我们的纪念日</title>
+<style>
+  :root {
+    --accent: #d96459;
+    --accent-deep: #b84a40;
+    --gold: #d4a24c;
+    --bg: #f7f5f1;
+    --card: #ffffff;
+    --ink: #2b2b2b;
+    --ink-soft: #6b6b6b;
+    --ink-faint: #a8a8a8;
+    --line: #ece8e1;
+    --shadow: 0 8px 30px rgba(40,30,25,0.08);
+    --radius: 20px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    line-height: 1.6;
+  }
+
+  .hero {
+    text-align: center;
+    max-width: 520px;
+    width: 100%;
+  }
+
+  .hero-icon {
+    font-size: 64px;
+    line-height: 1;
+    margin-bottom: 20px;
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .hero h1 {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--ink);
+  }
+  .hero h1 span {
+    color: var(--accent);
+  }
+
+  .quote {
+    font-size: 15px;
+    color: var(--ink-faint);
+    margin-top: 18px;
+    font-style: italic;
+    line-height: 1.8;
+  }
+  .quote::before { content: '「'; color: var(--gold); }
+  .quote::after { content: '」'; color: var(--gold); }
+
+  .actions {
+    margin-top: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .btn {
+    padding: 14px 36px;
+    border-radius: 14px;
+    border: none;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all .2s;
+    width: 100%;
+    max-width: 300px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(217,100,89,0.3);
+  }
+  .btn-primary:hover { background: var(--accent-deep); transform: translateY(-1px); }
+  .btn-outline {
+    background: #fff;
+    color: var(--ink-soft);
+    border: 1.5px solid var(--line);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: #fef8f7; }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 300px;
+    color: var(--ink-faint);
+    font-size: 12px;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .join-panel {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+  .join-panel.show { display: flex; }
+
+  .input-box {
+    width: 100%;
+    max-width: 300px;
+    padding: 13px 16px;
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    font-size: 16px;
+    font-family: inherit;
+    text-align: center;
+    letter-spacing: 3px;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: #fff;
+    color: var(--ink);
+    transition: border-color .2s;
+  }
+  .input-box:focus { outline: none; border-color: var(--accent); }
+  .input-box::placeholder {
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 400;
+    font-size: 14px;
+    color: var(--ink-faint);
+  }
+
+  .back-link {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--ink-faint);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .back-link:hover { color: var(--accent); }
+
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: #fff;
+    padding: 11px 22px;
+    border-radius: 24px;
+    font-size: 13px;
+    opacity: 0;
+    transition: all .25s;
+    z-index: 200;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="hero-icon">📅</div>
+  <h1>我们的<span>纪念日</span>日历</h1>
+  <div class="quote">我们每天度过的日常，都是连续不断的奇迹</div>
+
+  <div class="actions" id="mainActions">
+    <button class="btn btn-primary" id="createBtn">✨ 创建纪念日空间</button>
+    <div class="divider">或</div>
+    <button class="btn btn-outline" id="joinToggleBtn">🔗 加入好友的空间</button>
+  </div>
+
+  <div class="join-panel" id="joinPanel">
+    <input class="input-box" id="codeInput" placeholder="输入房间码（6位大写字母）" maxlength="6" autocomplete="off">
+    <button class="btn btn-primary" id="joinBtn">加入空间</button>
+    <span class="back-link" id="backBtn">← 返回</span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+$('#createBtn').addEventListener('click', async () => {
+  $('#createBtn').textContent = '创建中…'; $('#createBtn').disabled = true;
+  try {
+    const res = await fetch('/api/room', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '' }),
+    });
+    const data = await res.json();
+    window.location.href = '/r/' + data.roomId;
+  } catch (e) {
+    toast('创建失败，请确认服务器已启动'); // fallback for static mode
+    const id = Math.random().toString(36).slice(2,8).toUpperCase();
+    window.location.href = '/r/' + id;
+  }
+});
+
+$('#joinToggleBtn').addEventListener('click', () => {
+  $('#mainActions').style.display = 'none';
+  $('#joinPanel').classList.add('show');
+  $('#codeInput').focus();
+});
+
+$('#backBtn').addEventListener('click', () => {
+  $('#mainActions').style.display = '';
+  $('#joinPanel').classList.remove('show');
+});
+
+$('#joinBtn').addEventListener('click', () => {
+  const code = $('#codeInput').value.trim().toUpperCase();
+  if (code.length !== 6 || !/^[A-Z0-9]{6}$/.test(code)) {
+    toast('请输入6位大写字母和数字的房间码'); return;
+  }
+  window.location.href = '/r/' + code;
+});
+
+$('#codeInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('#joinBtn').click();
+});
+</script>
+</body>
+</html>
