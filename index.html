@@ -28,7 +28,7 @@ body.custom-bg::after{background:rgba(247,245,241,0.78)}
 .top-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .top-btn-accent{background:var(--accent);color:#fff;border-color:var(--accent)}
 .top-btn-accent:hover{background:var(--accent-deep);color:#fff}
-.quote-line{max-width:1180px;margin:14px auto 0;text-align:center;font-size:13px;color:var(--ink-faint);font-style:italic;letter-spacing:.5px}
+.quote-line{max-width:1180px;margin:14px auto 0;text-align:center;font-size:17px;color:var(--ink-faint);font-style:italic;letter-spacing:.5px}
 .app{max-width:1180px;margin:16px auto;display:grid;grid-template-columns:1fr 340px;gap:20px;padding:0 24px 24px}
 .calendar-card{background:var(--card-trans);backdrop-filter:blur(8px);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px 32px 32px;position:relative}
 .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;position:relative;flex-wrap:wrap;gap:10px}
@@ -163,7 +163,6 @@ body.custom-bg::after{background:rgba(247,245,241,0.78)}
     </span>
   </div>
   <div class="topbar-right">
-    <button class="top-btn" id="shareBtn">🔗 分享</button>
     <button class="top-btn" id="calSubscribeBtn">📅 订阅日历</button>
     <button class="top-btn" id="settingsBtn">🎨 背景</button>
     <button class="top-btn top-btn-accent" id="exportImportBtn">📤 导入/导出</button>
@@ -218,7 +217,7 @@ body.custom-bg::after{background:rgba(247,245,241,0.78)}
       <div class="ann-section-label" style="margin-top:16px">新建纪念日</div>
       <div class="form-row"><label>名称 <span style="color:var(--accent)">*</span></label><input type="text" id="fTitle" placeholder="比如：在一起的日子" maxlength="30"></div>
       <div class="form-row"><label>描述（可选）</label><textarea id="fDesc" placeholder="写点什么..." maxlength="120"></textarea></div>
-      <div class="form-row"><label>照片（可选，最大 2MB）</label><label class="file-upload-btn" for="fImage">📷 上传照片</label><input type="file" id="fImage" accept="image/*" style="display:none;"><div id="imagePreview" class="image-preview" style="display:none"></div></div>
+      <div class="form-row"><label>照片（可选，最大 10MB）</label><label class="file-upload-btn" for="fImage">📷 上传照片</label><input type="file" id="fImage" accept="image/*" style="display:none;"><div id="imagePreview" class="image-preview" style="display:none"></div></div>
       <div class="form-row"><label>图标</label><div class="emoji-pick" id="emojiPick"></div></div>
       <div class="form-row"><label>颜色标签</label><div class="color-pick" id="colorPick"></div></div>
       <div class="form-row"><label>重复</label><div class="toggle-row"><div class="switch" id="repeatSwitch"></div><span class="t-label">每年重复</span></div></div>
@@ -236,16 +235,6 @@ body.custom-bg::after{background:rgba(247,245,241,0.78)}
     <div><label>纯色 / 无背景</label><div class="bg-solid" id="bgSolid"></div></div>
   </div></div>
   <div class="modal-foot"><button class="btn btn-ghost" id="closeSettingsBtn">关闭</button></div>
-</div></div>
-
-<!-- Share Modal -->
-<div class="modal-mask" id="shareModal"><div class="modal">
-  <div class="modal-head"><div class="mh-title">分享日历</div></div>
-  <div class="modal-body">
-    <p style="font-size:14px;color:var(--ink-soft);margin-bottom:14px;line-height:1.7;">把这个链接发给好友，大家一起编辑同一个日历，每个人的修改都会实时同步！</p>
-    <button class="btn btn-primary" id="copyLinkBtn" style="width:100%;">📋 复制链接</button>
-  </div>
-  <div class="modal-foot"><button class="btn btn-ghost" id="closeShareBtn">关闭</button></div>
 </div></div>
 
 <!-- Import/Export Modal -->
@@ -444,7 +433,7 @@ function hideImagePreview(){$('#imagePreview').style.display='none';$('#imagePre
 function buildEmojiPick(){const p=$('#emojiPick');p.innerHTML='';EMOJIS.forEach(e=>{const s=el('span');s.textContent=e;if(e===formState.emoji)s.classList.add('on');s.addEventListener('click',()=>{formState.emoji=e;buildEmojiPick()});p.appendChild(s)})}
 function buildColorPick(){const p=$('#colorPick');p.innerHTML='';COLORS.forEach(c=>{const s=el('span');s.style.background=c.hex;if(c.key===formState.color)s.classList.add('on');s.addEventListener('click',()=>{formState.color=c.key;buildColorPick()});p.appendChild(s)})}
 
-$('#fImage').addEventListener('change',()=>{const file=$('#fImage').files[0];if(!file)return;if(file.size>2*1024*1024){toast('图片不能超过 2MB');$('#fImage').value='';return}toast('处理中...');const reader=new FileReader();reader.onload=()=>{formState.image=reader.result;const prev=$('#imagePreview');prev.style.display='inline-block';prev.innerHTML='<img src="'+reader.result+'" alt="\u9884\u89c8"><button class="rm-img">\u00d7</button>';prev.querySelector('.rm-img').addEventListener('click',()=>{formState.image='';hideImagePreview()})};reader.readAsDataURL(file)});
+$('#fImage').addEventListener('change',()=>{const file=$('#fImage').files[0];if(!file)return;if(file.size>10*1024*1024){toast('图片不能超过 10MB');$('#fImage').value='';return}toast('处理中...');const reader=new FileReader();reader.onload=()=>{formState.image=reader.result;const prev=$('#imagePreview');prev.style.display='inline-block';prev.innerHTML='<img src="'+reader.result+'" alt="\u9884\u89c8"><button class="rm-img">\u00d7</button>';prev.querySelector('.rm-img').addEventListener('click',()=>{formState.image='';hideImagePreview()})};reader.readAsDataURL(file)});
 $('#showAddBtn').addEventListener('click',()=>{$('#addForm').classList.add('show');$('#showAddBtn').style.display='none';$('#fTitle').focus()});
 $('#repeatSwitch').addEventListener('click',()=>{formState.repeat=!formState.repeat;$('#repeatSwitch').classList.toggle('on',formState.repeat)});
 $('#closeDayBtn').addEventListener('click',()=>$('#dayModal').classList.remove('show'));
@@ -471,8 +460,8 @@ $('#jpClose').addEventListener('click',e=>{e.stopPropagation();$('#jumpPopover')
 document.addEventListener('click',e=>{const pop=$('#jumpPopover');if(!pop.classList.contains('show'))return;if(pop.contains(e.target)||e.target.closest('#jumpBtn'))return;pop.classList.remove('show')});
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){['#dayModal','#settingsModal','#shareModal','#importModal','#calSubscribeModal'].forEach(s=>{if($(s).classList.contains('show'))$(s).classList.remove('show')});if($('#jumpPopover').classList.contains('show'))$('#jumpPopover').classList.remove('show');return}
-  if(['#dayModal','#settingsModal','#shareModal','#importModal','#calSubscribeModal'].some(s=>$(s).classList.contains('show')))return;
+  if(e.key==='Escape'){['#dayModal','#settingsModal','#importModal','#calSubscribeModal'].forEach(s=>{if($(s).classList.contains('show'))$(s).classList.remove('show')});if($('#jumpPopover').classList.contains('show'))$('#jumpPopover').classList.remove('show');return}
+  if(['#dayModal','#settingsModal','#importModal','#calSubscribeModal'].some(s=>$(s).classList.contains('show')))return;
   if(e.key==='ArrowLeft'){view.setMonth(view.getMonth()-1);render()}if(e.key==='ArrowRight'){view.setMonth(view.getMonth()+1);render()}
 });
 
@@ -498,13 +487,7 @@ function buildBgSolid(){const p=$('#bgSolid');const presets=[{name:'默认',colo
 $('#settingsBtn').addEventListener('click',()=>{buildBgGradients();buildBgSolid();$('#settingsModal').classList.add('show')});
 $('#closeSettingsBtn').addEventListener('click',()=>$('#settingsModal').classList.remove('show'));
 $('#settingsModal').addEventListener('click',e=>{if(e.target===$('#settingsModal'))$('#settingsModal').classList.remove('show')});
-$('#bgImage').addEventListener('change',()=>{const file=$('#bgImage').files[0];if(!file)return;if(file.size>2*1024*1024){toast('背景图不能超过 2MB');$('#bgImage').value='';return}toast('处理中...');const reader=new FileReader();reader.onload=()=>{data.settings.background={type:'image',value:reader.result};applyBg();saveData();toast('背景已更新')};reader.readAsDataURL(file)});
-
-// ---- Share ----
-$('#shareBtn').addEventListener('click',()=>{$('#shareModal').classList.add('show')});
-$('#copyLinkBtn').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(location.href);toast('链接已复制，发给好友吧！')}catch(e){toast('复制失败')}});
-$('#closeShareBtn').addEventListener('click',()=>$('#shareModal').classList.remove('show'));
-$('#shareModal').addEventListener('click',e=>{if(e.target===$('#shareModal'))$('#shareModal').classList.remove('show')});
+$('#bgImage').addEventListener('change',()=>{const file=$('#bgImage').files[0];if(!file)return;if(file.size>10*1024*1024){toast('背景图不能超过 10MB');$('#bgImage').value='';return}toast('处理中...');const reader=new FileReader();reader.onload=()=>{data.settings.background={type:'image',value:reader.result};applyBg();saveData();toast('背景已更新')};reader.readAsDataURL(file)});
 
 // ---- Import/Export ----
 $('#exportImportBtn').addEventListener('click',()=>{$('#importText').value='';$('#importFile').value='';$('#importModal').classList.add('show')});
